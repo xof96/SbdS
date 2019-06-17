@@ -1,0 +1,12 @@
+#IDE
+.idea/
+__pycache__/
+
+# Data
+data/
+env.py
+
+# Virtual Env
+venv/
+
+MD5SUM
