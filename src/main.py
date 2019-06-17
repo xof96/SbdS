@@ -13,6 +13,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 nltk.download('stopwords')
 nltk.download('punkt')
 
+
 # %%
 # Making the vocabulary
 
@@ -38,8 +39,7 @@ set(stop_words)
 # %%
 captions = extract_text_from_captions(train_captions, test_captions)
 
-
-#%%
+# %%
 train_data = []
 
 for sent in captions:
@@ -48,9 +48,9 @@ for sent in captions:
         buf.append(w.lower())
     train_data.append(buf)
 
-#%%
+# %%
 from gensim.models import Word2Vec
 
-#%%
+# %%
 
-model = Word2Vec(train_data, min_count = 1, size = 100, window = 5, sg = 1)
+model = Word2Vec(train_data, min_count=1, size=100, window=5, sg=1)
