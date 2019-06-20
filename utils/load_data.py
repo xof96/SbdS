@@ -34,10 +34,18 @@ def load_captions(file_captions):
 
 
 def load_train_vectors():
+    """
+    Load train image names and vectors.
+    :return: Train names, Train vectors.
+    """
     return load_file(TRAIN_IMAGES, TRAIN_VECTORS, 20000, 2048)
 
 
 def load_test_vectors():
+    """
+    Load test image names and vectors.
+    :return: Test names, Test vectors.
+    """
     return load_file(TEST_IMAGES, TEST_VECTORS, 1000, 2048)
 
 

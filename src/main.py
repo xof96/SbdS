@@ -1,8 +1,35 @@
 import numpy as np
 import utils.load_data as ld
 
-train_captions = ld.load_train_captions()
-test_captions = ld.load_test_captions()
+
+# %%
+# Vectorization of descriptions
+def split_image_from_caption(captions_arr):
+    """
+    # Split and [img, caption] array into two different arrays.
+    :param captions_arr: Arrays containing captions and images.
+    :return: Captions array and images array in a tuple.
+    """
+    img = []
+    cap = []
+    for x, y in captions_arr:
+        cap.append(y)
+        img.append(x)
+    return cap, img
+
+
+# %%
+train_captions, train_capt_labels = split_image_from_caption(ld.load_train_captions())
+test_captions, test_capt_labels = split_image_from_caption(ld.load_test_captions())
+
+# %%
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# %%
+ti_vectorizer = TfidfVectorizer()
+X = ti_vectorizer.fit_transform(train_captions)
+train_vectors = X.toarray()
+print(ti_vectorizer.get_feature_names())
 
 # %%
 import nltk
