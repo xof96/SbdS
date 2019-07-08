@@ -1,73 +1,226 @@
 import numpy as np
-import utils.load_data as ld
-
 
 # %%
-# Vectorization of descriptions
-def split_image_from_caption(captions_arr):
-    """
-    # Split and [img, caption] array into two different arrays.
-    :param captions_arr: Arrays containing captions and images.
-    :return: Captions array and images array in a tuple.
-    """
-    img = []
-    cap = []
-    for x, y in captions_arr:
-        cap.append(y)
-        img.append(x)
-    return cap, img
 
+from utils.data_processing import (
+    train_captions, train_capt_labels,
+    test_A_captions, test_A_capt_labels,
+    test_B_captions, test_B_capt_labels,
+    test_C_captions, test_C_capt_labels,
+    train_img_name_vectors, train_img_vectors,
+    test_A_img_name_vectors, test_A_img_vectors,
+    test_B_img_name_vectors, test_B_img_vectors,
+    test_C_img_name_vectors, test_C_img_vectors
+)
 
 # %%
-train_captions, train_capt_labels = split_image_from_caption(ld.load_train_captions())
-test_captions, test_capt_labels = split_image_from_caption(ld.load_test_captions())
-
-train_img_name_vectors, train_img_vectors = ld.load_train_vectors()
-
-# %%
+# TF-IDF
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # %%
-ti_vectorizer = TfidfVectorizer()
-X = ti_vectorizer.fit_transform(train_captions)
-train_vectors = X.toarray()
+# ti_vectorizer = TfidfVectorizer(max_df=0.7, min_df=0.0001, ngram_range=(1, 2))
+# ti_vectorizer = TfidfVectorizer(max_df=0.7, min_df=0.00002)
+ti_vectorizer = TfidfVectorizer(max_df=14000, min_df=2)
+ti_vectorizer.fit(train_captions)
+X = ti_vectorizer.transform(train_captions)
+x_test_A = ti_vectorizer.transform(test_A_captions)
+x_test_B = ti_vectorizer.transform(test_B_captions)
+x_test_C = ti_vectorizer.transform(test_C_captions)
+words = ti_vectorizer.get_feature_names()
+
+# %%
+# SkipGram
+from utils.data_processing import tokenize
+import gensim
+
+# %%
+sg_model = gensim.models.Word2Vec(sentences=tokenize(train_captions), sg=1, size=100, window=3)
+
+# %%
+# Making Dataset for Regression
+from utils.data_processing import make_targets
+
+x_train = X.toarray()
+y_train = make_targets(train_captions, train_img_vectors)
+x_test_A = x_test_A.toarray()
+y_test_A = make_targets(test_A_captions, test_A_img_vectors)
+x_test_B = x_test_B.toarray()
+y_test_B = make_targets(test_B_captions, test_B_img_vectors)
+x_test_C = x_test_C.toarray()
+y_test_C = make_targets(test_C_captions, test_C_img_vectors)
+
+# %%
+# Building Regression
+from keras.models import load_model
+from keras import Sequential
+from keras.layers import Dense, InputLayer, CuDNNLSTM
+from keras.layers import Activation, Dropout
+
+# %%
+mlp = Sequential()
+mlp.add(InputLayer(input_shape=x_train.shape[1:]))
+
+mlp.add(Dense(units=4096))
+mlp.add(Activation(activation='relu'))
+mlp.add(Dropout(rate=0.2))
+
+mlp.add(Dense(units=2048))
+
+# %%
+mlp.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+
+history = mlp.fit(x=x_train, y=y_train, batch_size=512, epochs=5, validation_split=0.2)
+
+# %%
+mlp.evaluate(x_test_A, y_test_A)
+
+# %%
+mlp.evaluate(x_test_B, y_test_B)
+
+# %%
+mlp.evaluate(x_test_C, y_test_C)
+
+# %%
+y_pred_A = mlp.predict(x_test_A)
+y_pred_B = mlp.predict(x_test_B)
+y_pred_C = mlp.predict(x_test_C)
+
+# %%
+import os
+import pickle
+
+vec_path = 'vectors'
+pred_A_path = 'y_pred_tf_idf_test_A.pickle'
+pred_B_path = 'y_pred_tf_idf_test_B.pickle'
+pred_C_path = 'y_pred_tf_idf_test_C.pickle'
+
+# %%
+# Saving
+with open(os.path.join(vec_path, pred_A_path), 'wb') as o_file:
+    pickle.dump(y_pred_A, o_file)
+
+with open(os.path.join(vec_path, pred_B_path), 'wb') as o_file:
+    pickle.dump(y_pred_B, o_file)
+
+with open(os.path.join(vec_path, pred_C_path), 'wb') as o_file:
+    pickle.dump(y_pred_C, o_file)
+
+# %%
+# Loading
+with open(os.path.join(vec_path, pred_A_path), 'rb') as o_file:
+    y_pred_A = pickle.load(o_file)
+
+with open(os.path.join(vec_path, pred_B_path), 'rb') as o_file:
+    y_pred_B = pickle.load(o_file)
+
+with open(os.path.join(vec_path, pred_C_path), 'rb') as o_file:
+    y_pred_C = pickle.load(o_file)
 
 
 # %%
-# import nltk
-# from nltk.corpus import stopwords
-# from nltk.tokenize import sent_tokenize, word_tokenize
-#
-# nltk.download('stopwords')
-# nltk.download('punkt')
+# Computing distances
+def get_metrics(pred_list, img_name_list, img_caption_list, targets, img_list):
+    def metrics_for_one(pred, img_name, img_caption, targets, img_list):
+        met = {
+            'img_name': img_name,
+            'img_caption': img_caption,
+            'pred_vec': pred
+        }
+        n_img = len(img_list)
+        dist = []
+        dist_buf = np.sqrt(np.sum(np.square(targets - pred), axis=1))
+        for i in range(n_img):
+            dist.append([dist_buf[i], img_list[i]])
+        dist.sort(key=lambda x: x[0])
+        met['nearest'] = dist[0]
+        for i, e in enumerate(dist):
+            if e[1] == img_name:
+                met['position'] = i
+                met['distance'] = e[0]
+                break
+        return met
+
+    n_pred = len(pred_list)
+    pred_metrics = []
+
+    for i in range(n_pred):
+        m_buffer = metrics_for_one(pred_list[i], img_name_list[i], img_caption_list[i], targets, img_list)
+        pred_metrics.append(m_buffer)
+
+    histogram = np.zeros(1000)
+    mrr = 0
+    mean_pos = 0
+    re_call_1 = 0
+    re_call_5 = 0
+    re_call_10 = 0
+    for pm in pred_metrics:
+        pos = pm['position']
+        mean_pos += (pos + 1)
+        mrr += (1 / (pos + 1))
+        histogram[pos] += 1
+        # Recall at 1
+        if pos == 0:
+            re_call_1 += 1
+        # Recall at 5
+        if pos < 5:
+            re_call_5 += 1
+        # Recall at 10
+        if pos < 10:
+            re_call_10 += 1
+    mrr /= 5000
+    mean_pos /= 5000
+    re_call_1 /= 5000
+    re_call_5 /= 5000
+    re_call_10 /= 5000
+    metrics = {
+        'histogram': histogram,
+        'mean_pos': mean_pos,
+        're_call_1': re_call_1,
+        're_call_5': re_call_5,
+        're_call_10': re_call_10,
+        'mrr': mrr
+    }
+    return metrics
 
 
 # %%
-# Making the vocabulary
+metrics_A = get_metrics(y_pred_A, test_A_capt_labels, test_A_captions, test_A_img_vectors, test_A_img_name_vectors)
+metrics_B = get_metrics(y_pred_B, test_B_capt_labels, test_B_captions, test_B_img_vectors, test_B_img_name_vectors)
+metrics_C = get_metrics(y_pred_C, test_C_capt_labels, test_C_captions, test_C_img_vectors, test_C_img_name_vectors)
 
-# def extract_text_from_captions(*args):
-#     """
-#     Extract the text from arrays of ['image', caption'] elements.
-#     :param args: Arrays containing image name and caption.
-#     :return: List of captions.
-#     """
-#     text_caps = []
-#     for a in args:
-#         for i in a:
-#             text_caps.append(i[1])
-#     return text_caps
-#
-# captions = extract_text_from_captions(train_captions, test_captions)
 
 # %%
-# train_data = []
-#
-# for sent in captions:
-#     buf = []
-#     for w in word_tokenize(sent):
-#         buf.append(w.lower())
-#     train_data.append(buf)
+def print_metrics(metrics):
+    for k, v in metrics.items():
+        print('{}: {}'.format(k, v))
+
 
 # %%
-# from gensim.models import Word2Vec
-# model = Word2Vec(train_data, min_count=1, size=100, window=5, sg=1)
+print_metrics(metrics=metrics_C)
+
+# %%
+# %matplotlib inline
+import matplotlib.pyplot as plt
+
+# %%
+plt.bar(range(1, 101), metrics_A['histogram'][:100], width=0.5)
+plt.show()
+
+# %%
+print("Valores en History: {}".format(history.history.keys()))
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
+
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('categorical_accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()

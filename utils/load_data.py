@@ -3,14 +3,25 @@ import os
 import env
 
 TRAIN_DATA_PATH = env.TRAIN_DATA
-TEST_DATA_PATH = env.TEST_DATA
+TEST_A_DATA_PATH = env.TEST_A_DATA
+TEST_B_DATA_PATH = env.TEST_B_DATA
+TEST_C_DATA_PATH = env.TEST_C_DATA
 
 TRAIN_CAPTIONS = os.path.join(TRAIN_DATA_PATH, 'train_captions.txt')
 TRAIN_IMAGES = os.path.join(TRAIN_DATA_PATH, 'train_images_names.txt')
 TRAIN_VECTORS = os.path.join(TRAIN_DATA_PATH, 'train_images_vectors.bin')
-TEST_CAPTIONS = os.path.join(TEST_DATA_PATH, 'test_captions.txt')
-TEST_IMAGES = os.path.join(TEST_DATA_PATH, 'test_images_names.txt')
-TEST_VECTORS = os.path.join(TEST_DATA_PATH, 'test_images_vectors.bin')
+
+TEST_A_CAPTIONS = os.path.join(TEST_A_DATA_PATH, 'test_A_captions.txt')
+TEST_A_IMAGES = os.path.join(TEST_A_DATA_PATH, 'test_A_images_names.txt')
+TEST_A_VECTORS = os.path.join(TEST_A_DATA_PATH, 'test_A_images_vectors.bin')
+
+TEST_B_CAPTIONS = os.path.join(TEST_B_DATA_PATH, 'test_B_captions.txt')
+TEST_B_IMAGES = os.path.join(TEST_B_DATA_PATH, 'test_B_images_names.txt')
+TEST_B_VECTORS = os.path.join(TEST_B_DATA_PATH, 'test_B_images_vectors.bin')
+
+TEST_C_CAPTIONS = os.path.join(TEST_C_DATA_PATH, 'test_C_captions.txt')
+TEST_C_IMAGES = os.path.join(TEST_C_DATA_PATH, 'test_C_images_names.txt')
+TEST_C_VECTORS = os.path.join(TEST_C_DATA_PATH, 'test_C_images_vectors.bin')
 
 
 def load_file(file_names, file_vectors, num_vectors, vector_dimensions):
@@ -41,30 +52,54 @@ def load_train_vectors():
     return load_file(TRAIN_IMAGES, TRAIN_VECTORS, 20000, 2048)
 
 
-def load_test_vectors():
+def load_test_A_vectors():
     """
-    Load test image names and vectors.
+    Load test A image names and vectors.
     :return: Test names, Test vectors.
     """
-    return load_file(TEST_IMAGES, TEST_VECTORS, 1000, 2048)
+    return load_file(TEST_A_IMAGES, TEST_A_VECTORS, 1000, 2048)
+
+
+def load_test_B_vectors():
+    """
+    Load test B image names and vectors.
+    :return: Test names, Test vectors.
+    """
+    return load_file(TEST_B_IMAGES, TEST_B_VECTORS, 1000, 2048)
+
+
+def load_test_C_vectors():
+    """
+    Load test C image names and vectors.
+    :return: Test names, Test vectors.
+    """
+    return load_file(TEST_C_IMAGES, TEST_C_VECTORS, 1000, 2048)
 
 
 def load_train_captions():
     return load_captions(TRAIN_CAPTIONS)
 
 
-def load_test_captions():
-    return load_captions(TEST_CAPTIONS)
+def load_test_A_captions():
+    return load_captions(TEST_A_CAPTIONS)
+
+
+def load_test_B_captions():
+    return load_captions(TEST_B_CAPTIONS)
+
+
+def load_test_C_captions():
+    return load_captions(TEST_C_CAPTIONS)
 
 
 train_captions = load_train_captions()
-test_captions = load_test_captions()
+test_captions = load_test_A_captions()
 
 if __name__ == '__main__':
     for i in range(6):
         print("Imagen \"" + train_captions[i][0] + "\" tiene caption \"" + train_captions[i][1] + "\"")
     (train_names, train_vectors) = load_train_vectors()
-    (test_names, test_vectors) = load_test_vectors()
+    (test_names, test_vectors) = load_test_A_vectors()
 
     print("Imagen \"" + train_names[0] + "\" tiene descriptor visual " + str(train_vectors[0]) + " de dimension " + str(
         len(train_vectors[0])))
