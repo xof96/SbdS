@@ -34,19 +34,60 @@ from utils.data_processing import tokenize
 import gensim
 
 # %%
-sg_model = gensim.models.Word2Vec(sentences=tokenize(train_captions), sg=1, size=100, window=3)
+import logging
+
+# allows display info
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
+# %%
+sg_vec_size = 500
+path_to_keyed_vectors_file = 'vectors/sg.kv'
+tok_train_captions = tokenize(train_captions)
+tok_test_A_captions = tokenize(test_A_captions)
+tok_test_B_captions = tokenize(test_B_captions)
+tok_test_C_captions = tokenize(test_C_captions)
+
+# %%
+sg_model = gensim.models.Word2Vec(sentences=tok_train_captions, sg=1, size=sg_vec_size, window=5, min_count=2,
+                                  sample=1e-5)
+
+# %%
+# Save representations
+sg_model.wv.save(path_to_keyed_vectors_file)
+
+# %%
+# Load representations
+words_embeddings = gensim.models.KeyedVectors.load(path_to_keyed_vectors_file, mmap="r")
+
+# %%
+from utils.data_processing import captions2vec
+
+x_train = captions2vec(tok_train_captions, words_embeddings)
+
+# %%
+x_test_A = captions2vec(tok_test_A_captions, words_embeddings)
+
+# %%
+from sklearn.preprocessing import scale
+
+x_train = scale(x_train)
+x_test_A = scale(x_test_A)
 
 # %%
 # Making Dataset for Regression
-from utils.data_processing import make_targets
 
 x_train = X.toarray()
-y_train = make_targets(train_captions, train_img_vectors)
 x_test_A = x_test_A.toarray()
-y_test_A = make_targets(test_A_captions, test_A_img_vectors)
 x_test_B = x_test_B.toarray()
-y_test_B = make_targets(test_B_captions, test_B_img_vectors)
 x_test_C = x_test_C.toarray()
+
+# %%
+# Make Targets
+from utils.data_processing import make_targets
+
+y_train = make_targets(train_captions, train_img_vectors)
+y_test_A = make_targets(test_A_captions, test_A_img_vectors)
+y_test_B = make_targets(test_B_captions, test_B_img_vectors)
 y_test_C = make_targets(test_C_captions, test_C_img_vectors)
 
 # %%
@@ -60,7 +101,8 @@ from keras.layers import Activation, Dropout
 mlp = Sequential()
 mlp.add(InputLayer(input_shape=x_train.shape[1:]))
 
-mlp.add(Dense(units=4096))
+# mlp.add(Dense(units=4096))
+mlp.add(Dense(units=512))
 mlp.add(Activation(activation='relu'))
 mlp.add(Dropout(rate=0.2))
 
@@ -69,7 +111,7 @@ mlp.add(Dense(units=2048))
 # %%
 mlp.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
-history = mlp.fit(x=x_train, y=y_train, batch_size=512, epochs=5, validation_split=0.2)
+history = mlp.fit(x=x_train, y=y_train, batch_size=512, epochs=10, validation_split=0.2)
 
 # %%
 mlp.evaluate(x_test_A, y_test_A)
@@ -196,7 +238,7 @@ def print_metrics(metrics):
 
 
 # %%
-print_metrics(metrics=metrics_C)
+print_metrics(metrics=metrics_A)
 
 # %%
 # %matplotlib inline

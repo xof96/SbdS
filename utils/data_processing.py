@@ -73,4 +73,17 @@ all_words = nltk.FreqDist(all_words)
 
 least_freq = list(filter(lambda x: x[1] == 1, all_words.items()))
 
+
 # %%
+
+def captions2vec(captions, word_vectors):
+    captions_vec = []
+    for caption in captions:
+        cap = []
+        for word in caption:
+            if word in word_vectors:
+                cap.append(word_vectors[word])
+        cap_vec = np.sum(np.array(cap), axis=0)
+        cap_vec = cap_vec / np.sqrt(cap_vec.dot(cap_vec))
+        captions_vec.append(cap_vec)
+    return np.array(captions_vec)
