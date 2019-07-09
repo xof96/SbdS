@@ -52,20 +52,36 @@ from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 # nltk.download('punkt')
 
 # %%
-def tokenize(caption_list):
+def tokenize(caption_list, max_freq=0, min_freq=0, lower=True):
     res = []
+    all_words = []
+    dropped = []
     rg_tokenizer = RegexpTokenizer(r'\w+')
+    n_captions = 0
     for caption in caption_list:
         cap = []
         tk_cap = rg_tokenizer.tokenize(caption)
-        for c in tk_cap:
-            cap.append(c.lower())
+        n_captions += 1
+        for w in tk_cap:
+            _w = w.lower() if lower else w
+            cap.append(_w)
+            all_words.append(_w)
         res.append(cap)
-    return res
+    all_words = nltk.FreqDist(all_words)
+    if max_freq == min_freq == 0:
+        return res, all_words, dropped
+    else:
+        for i in range(n_captions):
+            n_w = len(res[i]) - 1
+            while n_w >= 0:
+                if not (min_freq <= all_words[res[i][n_w]] <= max_freq):
+                    dropped.append(res[i].pop(n_w))
+                n_w -= 1
+        return res, all_words, dropped
 
 
 # %%
-all_captions = tokenize(train_captions)
+all_captions, _, d = tokenize(train_captions, max_freq=14000, min_freq=2)
 
 # %%
 all_words = [word for capt in all_captions for word in capt]

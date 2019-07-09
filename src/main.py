@@ -29,6 +29,14 @@ x_test_C = ti_vectorizer.transform(test_C_captions)
 words = ti_vectorizer.get_feature_names()
 
 # %%
+# Making Dataset for Regression
+
+x_train = X.toarray()
+x_test_A = x_test_A.toarray()
+x_test_B = x_test_B.toarray()
+x_test_C = x_test_C.toarray()
+
+# %%
 # SkipGram
 from utils.data_processing import tokenize
 import gensim
@@ -48,8 +56,7 @@ tok_test_B_captions = tokenize(test_B_captions)
 tok_test_C_captions = tokenize(test_C_captions)
 
 # %%
-sg_model = gensim.models.Word2Vec(sentences=tok_train_captions, sg=1, size=sg_vec_size, window=5, min_count=2,
-                                  sample=1e-5)
+sg_model = gensim.models.Word2Vec(sentences=tok_train_captions, sg=1, size=sg_vec_size, window=5, min_count=2)
 
 # %%
 # Save representations
@@ -72,14 +79,6 @@ from sklearn.preprocessing import scale
 
 x_train = scale(x_train)
 x_test_A = scale(x_test_A)
-
-# %%
-# Making Dataset for Regression
-
-x_train = X.toarray()
-x_test_A = x_test_A.toarray()
-x_test_B = x_test_B.toarray()
-x_test_C = x_test_C.toarray()
 
 # %%
 # Make Targets
@@ -111,7 +110,7 @@ mlp.add(Dense(units=2048))
 # %%
 mlp.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
-history = mlp.fit(x=x_train, y=y_train, batch_size=512, epochs=10, validation_split=0.2)
+history = mlp.fit(x=x_train, y=y_train, batch_size=512, epochs=5, validation_split=0.2)
 
 # %%
 mlp.evaluate(x_test_A, y_test_A)
