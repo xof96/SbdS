@@ -1,11 +1,11 @@
-# Search By Description Similarity (SBDS)
+# [DEPRECATED] Search By Description Similarity (SBDS)
 
 Search of images given a description models trained over COCO dataset subset
 
 ## Preparing the data
 
 The data must be downloaded from <br> 
-https://drive.google.com/drive/folders/1RzGYR2uqMRS4WqX_wqIiI2Y_NdNAey1m 
+~https://drive.google.com/drive/folders/1RzGYR2uqMRS4WqX_wqIiI2Y_NdNAey1m~ [NOT AVAILABLE ANYMORE]
 <br> and unzipped inside a data/ folder which has
 to be right inside the root folder. There are 3 test folders, so the final 
 structure must be like the following:
